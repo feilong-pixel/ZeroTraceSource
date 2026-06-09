@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ZeroTraceSource</title>
+    <link rel="stylesheet" href="./css/style.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark">Z</div>
+          <div>
+            <div class="brand-name">ZeroTraceSource</div>
+            <div class="brand-subtitle">本地资料库搜索支援系统</div>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-button" type="button" aria-label="搜索">⌕</button>
+          <button class="secondary-button" type="button">新建资料库</button>
+        </div>
+      </header>
+
+      <main class="workspace" id="sourceWorkspace">
+        <aside class="panel sources-panel" aria-label="资料源">
+          <div class="panel-header">
+            <div>
+              <h1>资料源</h1>
+              <p>当前 notebook 中的本地文件</p>
+            </div>
+            <button class="icon-button" type="button" aria-label="收起资料源">◧</button>
+          </div>
+
+          <button class="add-source-button" type="button">＋ 添加资料</button>
+
+          <div class="source-search">
+            <label for="sourceSearch">在资料源中搜索</label>
+            <input id="sourceSearch" type="search" placeholder="文件名、标题、关键词">
+          </div>
+
+          <div class="source-list" id="sourceList"></div>
+        </aside>
+
+        <section class="panel chat-panel" aria-label="问答">
+          <div class="panel-header chat-header">
+            <div>
+              <h1>本地资料调查</h1>
+              <p>AI 只负责生成检索计划，事实来自本地索引。</p>
+            </div>
+            <div class="status-pill">原型</div>
+          </div>
+
+          <div class="chat-scroll" id="chatScroll"></div>
+
+          <form class="ask-box" id="askForm">
+            <div class="ask-meta">
+              <span id="selectedSourceCount">4 个资料源</span>
+              <span>关键词检索</span>
+            </div>
+            <div class="ask-row">
+              <input id="questionInput" type="text" value="归档状态影响哪里？" aria-label="输入问题">
+              <button class="send-button" type="submit" aria-label="发送">➜</button>
+            </div>
+          </form>
+        </section>
+
+        <aside class="panel evidence-panel" aria-label="出处">
+          <div class="panel-header">
+            <div>
+              <h1>引用与片段</h1>
+              <p>回答必须能回到原文。</p>
+            </div>
+            <button class="icon-button" type="button" aria-label="收起出处">◨</button>
+          </div>
+
+          <div class="plan-card">
+            <div class="section-label">搜索计划</div>
+            <div class="keyword-list" id="keywordList"></div>
+          </div>
+
+          <div class="evidence-list" id="evidenceList"></div>
+        </aside>
+      </main>
+    </div>
+
+    <script type="module" src="./js/app.js"></script>
+  </body>
+</html>

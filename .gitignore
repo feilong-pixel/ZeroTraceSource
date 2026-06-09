@@ -216,3 +216,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ZeroTraceSource local outputs
+outputs/
+*.tmp.xlsx
+~$*.xlsx

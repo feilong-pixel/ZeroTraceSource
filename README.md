@@ -77,6 +77,33 @@ Later scope:
 - Keyword expansion across business terms and code terms
 - Multi-language search support for English, Chinese, and Japanese
 
+## Engine Prototype
+
+The first engine prototype searches text/code files and Excel workbooks, then exports a structured investigation report.
+
+Example:
+
+```powershell
+python -m engine.runner `
+  --title "Sample Impact Investigation" `
+  --root samples/impact_investigation `
+  --keywords "safetyStrategy,安全方針,archive_flag,approve_status" `
+  --out outputs/sample-impact-investigation.xlsx
+```
+
+The report contains:
+
+- `Summary`
+- `SearchResults`
+- `Keywords`
+- `SearchRoots`
+
+Install runtime dependencies from:
+
+```powershell
+pip install -r requirements.txt
+```
+
 ## Design Principle
 
 ZeroTraceSource should always keep a clear boundary:
