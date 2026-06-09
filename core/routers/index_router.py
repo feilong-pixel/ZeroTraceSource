@@ -1,0 +1,36 @@
+"""Static page routes."""
+
+from pathlib import Path
+
+from fastapi import APIRouter
+from fastapi.responses import FileResponse, Response
+
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+STATIC_DIR = BASE_DIR / "static"
+INDEX_FILE = STATIC_DIR / "index.html"
+FAVICON_FILE = BASE_DIR / "favicon.ico"
+
+router = APIRouter()
+
+
+@router.get("/")
+async def index() -> FileResponse:
+    return FileResponse(INDEX_FILE)
+
+
+@router.get("/index.html")
+async def index_html() -> FileResponse:
+    return FileResponse(INDEX_FILE)
+
+
+@router.get("/favicon.ico")
+async def favicon():
+    if not FAVICON_FILE.exists():
+        return Response(status_code=204)
+
+    return FileResponse(FAVICON_FILE)
+
+
+@router.get("/api/app-info")
+async def app_info() -> dict[str, str]:
+    return {"base_dir": str(BASE_DIR)}

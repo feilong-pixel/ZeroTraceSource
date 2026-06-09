@@ -17,6 +17,7 @@ The first version should implement:
 - Unified search result records
 - Excel investigation report output
 - A simple investigation page that calls the engine and displays results
+- A local Python web service that serves the page and exposes the engine
 
 The first version should not implement:
 
@@ -47,6 +48,16 @@ ZeroTraceSource/
     report/
       __init__.py
       excel_writer.py
+  core/
+    routers/
+      ai_router.py
+      index_router.py
+      investigation_router.py
+    services/
+      ai_service.py
+      investigation_service.py
+  app.py
+  start.ps1
   static/
     index.html
     css/
@@ -63,8 +74,10 @@ ZeroTraceSource/
         result-table.js
         source-picker.js
   docs/
+    ai-collaboration-design.md
     architecture.md
     engine-first-design.md
+    page-first-design.md
     project-principles.md
   samples/
     impact_investigation/
@@ -107,7 +120,13 @@ context_lines
 output_path
 ```
 
-The first command line runner can accept these as arguments. Later, the page can send the same shape through a local API or command bridge.
+The command line runner and FastAPI route should accept the same request shape.
+
+For page-driven runs, the API may receive `outputDir` and `outputPrefix` instead of a full `outputPath`. The backend should generate:
+
+```text
+<prefix>_YYYYMMDD_HHMMSS.xlsx
+```
 
 ## Result Model
 
@@ -261,9 +280,8 @@ static/js/services/investigation-api.js
 
 This layer should hide whether the engine is called through:
 
-- A local HTTP API
-- A command bridge
-- A desktop wrapper
+- A local FastAPI route
+- A later desktop wrapper
 - A later packaged runtime
 
 The page should call service functions, not engine internals.
@@ -307,6 +325,7 @@ Recommended order:
 7. Verify with a small sample folder.
 8. Add investigation page.
 9. Add page service bridge.
+10. Add local FastAPI endpoint for running investigations.
 
 ## Sample Data
 

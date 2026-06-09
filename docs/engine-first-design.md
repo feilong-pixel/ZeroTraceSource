@@ -82,6 +82,7 @@ ZeroTraceSource/
   docs/
     architecture.md
     engine-first-design.md
+    page-first-design.md
     project-principles.md
 ```
 
@@ -142,7 +143,7 @@ Preview results
 Export Excel report
 ```
 
-The NotebookLM-style three-panel page can remain as a prototype, but the first practical page should be optimized for investigation work:
+The first practical page should be optimized for investigation work:
 
 - Left: investigation settings and keyword list
 - Center: result table

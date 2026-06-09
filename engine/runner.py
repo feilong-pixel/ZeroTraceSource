@@ -3,33 +3,22 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 from pathlib import Path
 
+from engine.investigation import run_investigation
 from engine.models import SearchRequest
-from engine.report.excel_writer import write_excel_report
-from engine.search.excel_searcher import search_excel_files
-from engine.search.file_walker import iter_search_files
-from engine.search.text_searcher import search_text_files
 
 
 def main() -> int:
     args = parse_args()
     request = build_request(args)
+    result = run_investigation(request)
 
-    text_files, excel_files = iter_search_files(request)
-    results = []
-
-    if "text" in request.file_kinds:
-        results.extend(search_text_files(text_files, request))
-    if "excel" in request.file_kinds:
-        results.extend(search_excel_files(excel_files, request))
-
-    output_path = write_excel_report(request, results)
-
-    print(f"Text files scanned: {len(text_files)}")
-    print(f"Excel files scanned: {len(excel_files)}")
-    print(f"Results: {len(results)}")
-    print(f"Report: {output_path}")
+    print(f"Text files scanned: {result.text_files_scanned}")
+    print(f"Excel files scanned: {result.excel_files_scanned}")
+    print(f"Results: {result.total_results}")
+    print(f"Report: {result.report_path}")
     return 0
 
 
@@ -39,7 +28,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--root", action="append", required=True, help="Search root. Can be specified multiple times.")
     parser.add_argument("--keyword", action="append", help="Keyword. Can be specified multiple times.")
     parser.add_argument("--keywords", help="Comma-separated keyword list.")
-    parser.add_argument("--out", required=True, help="Output .xlsx path.")
+    parser.add_argument("--out", help="Output .xlsx path. Kept for compatibility.")
+    parser.add_argument("--out-dir", help="Output directory. Used with --prefix.")
+    parser.add_argument("--prefix", help="Output file prefix. Used with --out-dir.")
     parser.add_argument("--kind", action="append", choices=["text", "excel"], help="Search kind. Defaults to both.")
     parser.add_argument("--case-sensitive", action="store_true", help="Use case-sensitive matching.")
     parser.add_argument("--context-lines", type=int, default=1, help="Text context lines before and after a match.")
@@ -70,7 +61,7 @@ def build_request(args: argparse.Namespace) -> SearchRequest:
         title=args.title,
         roots=[Path(root).resolve() for root in args.root],
         keywords=keywords,
-        output_path=Path(args.out).resolve(),
+        output_path=build_output_path(args),
         file_kinds=set(args.kind or ["text", "excel"]),
         include_extensions=include_extensions,
         exclude_patterns=args.exclude,
@@ -79,6 +70,22 @@ def build_request(args: argparse.Namespace) -> SearchRequest:
     )
 
 
+def build_output_path(args: argparse.Namespace) -> Path:
+    if args.out:
+        return Path(args.out).resolve()
+
+    if not args.out_dir or not args.prefix:
+        raise SystemExit("Either --out or both --out-dir and --prefix are required.")
+
+    safe_prefix = sanitize_prefix(args.prefix)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return (Path(args.out_dir) / f"{safe_prefix}_{timestamp}.xlsx").resolve()
+
+
+def sanitize_prefix(value: str) -> str:
+    cleaned = "".join("_" if char in '<>:"/\\|?*' else char for char in value.strip())
+    return cleaned or "investigation"
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
-

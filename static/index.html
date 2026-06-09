@@ -4,86 +4,189 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>ZeroTraceSource</title>
-    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css">
   </head>
   <body>
     <div class="app-shell">
       <header class="topbar">
         <div class="brand">
-          <div class="brand-mark">Z</div>
+          <img class="brand-mark" src="/static/images/ZeroTraceLab.png" alt="ZeroTraceSource">
           <div>
             <div class="brand-name">ZeroTraceSource</div>
-            <div class="brand-subtitle">本地资料库搜索支援系统</div>
+            <div class="brand-subtitle">影响范围调查工作台</div>
           </div>
         </div>
         <div class="topbar-actions">
-          <button class="icon-button" type="button" aria-label="搜索">⌕</button>
-          <button class="secondary-button" type="button">新建资料库</button>
+          <span class="status-pill">Engine first</span>
         </div>
       </header>
 
-      <main class="workspace" id="sourceWorkspace">
-        <aside class="panel sources-panel" aria-label="资料源">
+      <main class="investigation-workspace" id="investigationWorkspace">
+        <aside class="panel form-panel" aria-label="调查条件">
           <div class="panel-header">
             <div>
-              <h1>资料源</h1>
-              <p>当前 notebook 中的本地文件</p>
+              <h1>调查条件</h1>
+              <p>输入现场调查所需的最小参数。</p>
             </div>
-            <button class="icon-button" type="button" aria-label="收起资料源">◧</button>
           </div>
 
-          <button class="add-source-button" type="button">＋ 添加资料</button>
+          <form class="investigation-form" id="investigationForm">
+            <label class="field">
+              <span>调查标题</span>
+              <input id="titleInput" type="text" value="Sample Impact Investigation">
+            </label>
 
-          <div class="source-search">
-            <label for="sourceSearch">在资料源中搜索</label>
-            <input id="sourceSearch" type="search" placeholder="文件名、标题、关键词">
-          </div>
+            <div class="field">
+              <span>搜索目录</span>
+              <div class="add-row">
+                <input id="rootInput" type="text" placeholder="输入式样目录、代码目录或其它搜索目录">
+                <button class="ghost-button" type="button" id="addRootButton">追加</button>
+              </div>
+              <div class="item-list" id="rootList"></div>
+            </div>
 
-          <div class="source-list" id="sourceList"></div>
+            <div class="field">
+              <span>关键词</span>
+              <div class="add-row">
+                <input id="keywordInput" type="text" placeholder="输入关键词，支持粘贴多行">
+                <button class="ghost-button" type="button" id="addKeywordButton">追加</button>
+              </div>
+              <div class="item-list keyword-items" id="keywordList"></div>
+            </div>
+
+            <div class="field">
+              <span>不搜索包含这些字符的路径</span>
+              <div class="add-row">
+                <input id="excludeInput" type="text" placeholder="例如 old、backup、退避、検証用">
+                <button class="ghost-button" type="button" id="addExcludeButton">追加</button>
+              </div>
+              <div class="item-list keyword-items" id="excludeList"></div>
+            </div>
+
+            <label class="field">
+              <span>只搜索这些扩展名（可选）</span>
+              <input id="extensionsInput" type="text" placeholder=".java,.sql,.xlsx">
+            </label>
+
+            <div class="option-grid">
+              <div class="option-field">
+                <span>大小写</span>
+                <label class="check-field">
+                  <input id="caseSensitiveInput" type="checkbox">
+                  <span>区分大小写</span>
+                </label>
+              </div>
+
+              <label class="field option-field">
+                <span>上下文行数</span>
+                <input id="contextLinesInput" type="number" min="0" max="5" value="1">
+              </label>
+            </div>
+
+            <label class="field">
+              <span>输出目录</span>
+              <input id="outputDirInput" type="text" value="outputs">
+            </label>
+
+            <label class="field">
+              <span>文件前缀</span>
+              <input id="outputPrefixInput" type="text" value="sample-impact-investigation">
+            </label>
+          </form>
         </aside>
 
-        <section class="panel chat-panel" aria-label="问答">
-          <div class="panel-header chat-header">
-            <div>
-              <h1>本地资料调查</h1>
-              <p>AI 只负责生成检索计划，事实来自本地索引。</p>
-            </div>
-            <div class="status-pill">原型</div>
-          </div>
-
-          <div class="chat-scroll" id="chatScroll"></div>
-
-          <form class="ask-box" id="askForm">
-            <div class="ask-meta">
-              <span id="selectedSourceCount">4 个资料源</span>
-              <span>关键词检索</span>
-            </div>
-            <div class="ask-row">
-              <input id="questionInput" type="text" value="归档状态影响哪里？" aria-label="输入问题">
-              <button class="send-button" type="submit" aria-label="发送">➜</button>
-            </div>
-          </form>
-        </section>
-
-        <aside class="panel evidence-panel" aria-label="出处">
+        <section class="panel command-panel" aria-label="生成命令">
           <div class="panel-header">
             <div>
-              <h1>引用与片段</h1>
-              <p>回答必须能回到原文。</p>
+              <h1>执行命令</h1>
+              <p>通过本地 Python Web 服务调用搜索引擎。</p>
             </div>
-            <button class="icon-button" type="button" aria-label="收起出处">◨</button>
+            <div class="panel-actions">
+              <button class="ghost-button" type="button" id="copyCommandButton">复制命令</button>
+              <button class="secondary-button" type="button" id="runInvestigationButton">开始搜索</button>
+            </div>
           </div>
 
-          <div class="plan-card">
-            <div class="section-label">搜索计划</div>
-            <div class="keyword-list" id="keywordList"></div>
+          <div class="command-body">
+            <div class="metric-grid">
+              <div class="metric-card">
+                <span>搜索目录</span>
+                <strong id="rootCount">2</strong>
+              </div>
+              <div class="metric-card">
+                <span>关键词</span>
+                <strong id="keywordCount">4</strong>
+              </div>
+              <div class="metric-card">
+                <span>输出格式</span>
+                <strong>Excel</strong>
+              </div>
+            </div>
+
+            <div class="run-note" id="runStatus">填写条件后点击开始搜索。命令预览保留用于核对。</div>
+
+            <div class="result-card" id="resultCard" hidden>
+              <div class="section-label">运行结果</div>
+              <dl class="result-grid">
+                <div>
+                  <dt>文本文件</dt>
+                  <dd id="textFilesScanned">0</dd>
+                </div>
+                <div>
+                  <dt>Excel 文件</dt>
+                  <dd id="excelFilesScanned">0</dd>
+                </div>
+                <div>
+                  <dt>命中结果</dt>
+                  <dd id="totalResults">0</dd>
+                </div>
+                <div>
+                  <dt>错误</dt>
+                  <dd id="errorResults">0</dd>
+                </div>
+              </dl>
+              <div class="report-path" id="reportPath"></div>
+            </div>
+
+            <div class="report-preview">
+              <div class="section-label">报告 Sheet</div>
+              <div class="sheet-list">
+                <span>Summary</span>
+                <span>SearchResults</span>
+                <span>Keywords</span>
+                <span>SearchRoots</span>
+              </div>
+            </div>
+
+            <details class="command-card">
+              <summary>PowerShell 命令预览</summary>
+              <pre id="commandPreview"></pre>
+            </details>
+          </div>
+        </section>
+
+        <aside class="panel detail-panel" aria-label="AI辅助">
+          <div class="panel-header">
+            <div>
+              <h1>AI 辅助</h1>
+              <p>先只生成关键词候选，用户确认后再加入。</p>
+            </div>
           </div>
 
-          <div class="evidence-list" id="evidenceList"></div>
+          <div class="detail-body">
+            <label class="field">
+              <span>客户变更内容</span>
+              <textarea id="changeTextInput" class="ai-textarea" rows="6" placeholder="例如：安全方針の表示文言を変更し、承認状態によって制御を変える"></textarea>
+            </label>
+
+            <button class="secondary-button full-button" type="button" id="generateCandidatesButton">生成关键词候选</button>
+            <div class="run-note" id="aiStatus">候选词不会自动加入，需要手动确认。</div>
+            <div class="candidate-list" id="candidateList"></div>
+          </div>
         </aside>
       </main>
     </div>
 
-    <script type="module" src="./js/app.js"></script>
+    <script type="module" src="/static/js/app.js"></script>
   </body>
 </html>

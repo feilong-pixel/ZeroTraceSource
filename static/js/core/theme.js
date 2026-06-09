@@ -4,10 +4,7 @@ const STORAGE_KEY = "ztbDisplayStyle";
 const THEME_LINK_ID = "ztb-theme-link";
 
 const DISPLAY_STYLES = {
-  default: { href: "./css/style.css?v=20260424-io9" },
-  "multi-light": { href: "./css/style_Multi.css?v=20260507-style", theme: "light" },
-  "multi-dark": { href: "./css/style_Multi.css?v=20260507-style", theme: "dark" },
-  harbor: { href: "./css/style_Harbor.css?v=20260507-style" },
+  default: { href: "/static/css/style.css" }
 };
 
 export function normalizeDisplayStyle(displayStyle) {

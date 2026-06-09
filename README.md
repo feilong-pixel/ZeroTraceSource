@@ -88,7 +88,8 @@ python -m engine.runner `
   --title "Sample Impact Investigation" `
   --root samples/impact_investigation `
   --keywords "safetyStrategy,安全方針,archive_flag,approve_status" `
-  --out outputs/sample-impact-investigation.xlsx
+  --out-dir outputs `
+  --prefix sample-impact-investigation
 ```
 
 The report contains:
@@ -101,8 +102,24 @@ The report contains:
 Install runtime dependencies from:
 
 ```powershell
-pip install -r requirements.txt
+~\.virtualenvs\venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
+
+## Local Web Service
+
+Run the local page and API with:
+
+```powershell
+.\start.ps1
+```
+
+Then open:
+
+```text
+http://127.0.0.1:8765/
+```
+
+The page calls `/api/investigations/run` and writes the investigation report through the same engine used by the command line runner.
 
 ## Design Principle
 

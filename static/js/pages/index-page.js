@@ -1,194 +1,336 @@
 // SPDX-License-Identifier: MIT
 
-import { $, $$, on } from "../core/dom.js";
+import { $ } from "../core/dom.js";
 
-const DEMO_SOURCES = [
-  {
-    id: "design",
-    type: "MD",
-    name: "Project Principles",
-    path: "docs/project-principles.md",
-    meta: "项目边界 · 本地优先",
-  },
-  {
-    id: "readme",
-    type: "MD",
-    name: "ZeroTraceSource README",
-    path: "README.md",
-    meta: "项目定位 · 66 行",
-  },
-  {
-    id: "notes",
-    type: "TXT",
-    name: "资料库问答边界记录",
-    path: "notebooks/local-search/boundary-notes.txt",
-    meta: "计划资料 · 24 行",
-  },
-  {
-    id: "api",
-    type: "SQL",
-    name: "source_index 草案",
-    path: "drafts/source_index_schema.sql",
-    meta: "后续接入 · 12 行",
-  },
-];
+const state = {
+  roots: [
+    "samples/impact_investigation/excel",
+    "samples/impact_investigation/code",
+  ],
+  keywords: ["safetyStrategy", "安全方針", "archive_flag", "approve_status"],
+  excludes: [],
+  baseDir: "",
+};
 
-const KEYWORDS = [
-  "归档",
-  "archive",
-  "storage_status",
-  "ArchiveService",
-  "资料词典",
-  "本地索引",
-  "出处",
-];
-
-const EVIDENCE = [
-  {
-    id: "ev-1",
-    title: "AI 负责理解问题，索引系统负责提供事实",
-    path: "docs/project-principles.md:47",
-    snippet: "Search finds evidence. Report organizes evidence. User decides the impact scope.",
-    highlighted: true,
-  },
-  {
-    id: "ev-2",
-    title: "用户用自然语言提问，系统找到真实依据",
-    path: "docs/architecture.md:146",
-    snippet: "Text search should cover source code, SQL, configuration files, and plain documents.",
-  },
-  {
-    id: "ev-3",
-    title: "第一版用 SQLite 和关键词检索跑通体验",
-    path: "docs/architecture.md:269",
-    snippet: "The first implementation should prefer Python scanning for the main text search path so text and Excel results share one data model.",
-  },
-  {
-    id: "ev-4",
-    title: "项目目标不是替代判断",
-    path: "README.md:30",
-    snippet: "Its job is to help users find sources, not to judge them.",
-  },
+const INPUT_IDS = [
+  "titleInput",
+  "caseSensitiveInput",
+  "contextLinesInput",
+  "outputDirInput",
+  "outputPrefixInput",
+  "extensionsInput",
 ];
 
 export function initIndexPage() {
-  const workspace = $("#sourceWorkspace");
+  const workspace = $("#investigationWorkspace");
   if (!workspace) return;
 
-  renderSources(DEMO_SOURCES);
-  renderKeywords(KEYWORDS);
-  renderEvidence(EVIDENCE);
-  renderInitialChat();
+  INPUT_IDS.forEach((id) => {
+    const input = $(`#${id}`);
+    if (!input) return;
+    input.addEventListener("input", updateView);
+    input.addEventListener("change", updateView);
+  });
 
-  on($("#askForm"), "submit", (event) => {
+  bindAddList("rootInput", "addRootButton", state.roots);
+  bindAddList("keywordInput", "addKeywordButton", state.keywords);
+  bindAddList("excludeInput", "addExcludeButton", state.excludes);
+
+  $("#copyCommandButton")?.addEventListener("click", copyCommand);
+  $("#runInvestigationButton")?.addEventListener("click", runInvestigation);
+  $("#runTopButton")?.addEventListener("click", runInvestigation);
+  $("#generateCandidatesButton")?.addEventListener("click", generateKeywordCandidates);
+
+  loadAppInfo().finally(updateView);
+}
+
+async function loadAppInfo() {
+  const response = await fetch("/api/app-info");
+  if (!response.ok) return;
+
+  const data = await response.json();
+  state.baseDir = data.base_dir || "";
+  state.roots = state.roots.map((root) => toAbsolutePath(root));
+  const outputDir = $("#outputDirInput");
+  if (outputDir) outputDir.value = toAbsolutePath(outputDir.value);
+}
+
+function bindAddList(inputId, buttonId, target) {
+  const input = $(`#${inputId}`);
+  const button = $(`#${buttonId}`);
+  if (!input || !button) return;
+
+  button.addEventListener("click", () => addItemsFromInput(input, target));
+  input.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
     event.preventDefault();
-    renderAskedQuestion($("#questionInput")?.value || "这份资料主要讲什么？");
-  });
-
-  on($("#sourceSearch"), "input", (event) => {
-    const keyword = event.target.value.trim().toLowerCase();
-    renderSources(
-      DEMO_SOURCES.filter((source) =>
-        [source.name, source.path, source.meta].some((value) => value.toLowerCase().includes(keyword)),
-      ),
-    );
+    addItemsFromInput(input, target);
   });
 }
 
-function renderSources(sources) {
-  const list = $("#sourceList");
-  if (!list) return;
-
-  list.innerHTML = sources
-    .map(
-      (source, index) => `
-        <article class="source-item ${index === 0 ? "is-active" : ""}">
-          <div class="source-icon">${source.type}</div>
-          <div>
-            <div class="source-name">${source.name}</div>
-            <div class="source-path">${source.path}</div>
-            <div class="source-meta">${source.meta}</div>
-          </div>
-          <div class="source-check">✓</div>
-        </article>
-      `,
-    )
-    .join("");
-
-  const count = $("#selectedSourceCount");
-  if (count) count.textContent = `${sources.length} 个资料源`;
+function addItemsFromInput(input, target) {
+  const items = splitItems(input.value).map((item) => (target === state.roots ? toAbsolutePath(item) : item));
+  items.forEach((item) => addUnique(target, item));
+  input.value = "";
+  updateView();
 }
 
-function renderKeywords(keywords) {
-  const list = $("#keywordList");
-  if (!list) return;
-
-  list.innerHTML = keywords.map((keyword) => `<span class="keyword">${keyword}</span>`).join("");
+function updateView() {
+  renderList("rootList", state.roots, "root");
+  renderList("keywordList", state.keywords, "keyword");
+  renderList("excludeList", state.excludes, "exclude");
+  updateCommandPreview();
 }
 
-function renderEvidence(items) {
-  const list = $("#evidenceList");
+function renderList(listId, items, type) {
+  const list = $(`#${listId}`);
   if (!list) return;
 
   list.innerHTML = items
     .map(
-      (item) => `
-        <article class="citation-card ${item.highlighted ? "is-highlighted" : ""}" data-evidence-id="${item.id}">
-          <h2 class="citation-title">${item.title}</h2>
-          <div class="citation-path">${item.path}</div>
-          <div class="citation-snippet">${item.snippet}</div>
-        </article>
+      (item, index) => `
+        <div class="list-item" title="${escapeHtml(item)}">
+          <span>${escapeHtml(displayValue(item, type))}</span>
+          <button type="button" data-type="${type}" data-index="${index}" aria-label="删除">×</button>
+        </div>
       `,
     )
     .join("");
-}
 
-function renderInitialChat() {
-  const chat = $("#chatScroll");
-  if (!chat) return;
-
-  chat.innerHTML = `
-    <article class="message assistant">
-      <div class="bubble">
-        <p>这个原型先验证最小闭环：问题会被转换成搜索计划，右侧展示真实出处和原文片段。</p>
-        <p class="answer-note">当前是静态演示数据。下一步可以把 Markdown / TXT 导入 SQLite，再把这些卡片换成真实检索结果。</p>
-      </div>
-      <div class="answer-actions">
-        <button class="answer-action" type="button">保存为笔记</button>
-        <button class="answer-action" type="button">复制出处</button>
-      </div>
-    </article>
-  `;
-}
-
-function renderAskedQuestion(question) {
-  const chat = $("#chatScroll");
-  if (!chat) return;
-
-  chat.insertAdjacentHTML(
-    "beforeend",
-    `
-      <article class="message user">
-        <div class="bubble">${escapeHtml(question)}</div>
-      </article>
-      <article class="message assistant">
-        <div class="bubble">
-          <p>我会先把问题拆成关键词，再从本地索引中找出处。当前命中的核心方向是：本地索引、资料词典、引用片段、搜索计划。</p>
-          <p>右侧列出了 4 条示例出处。第一版后端接入以后，这里只整理真实搜索结果，不输出没有来源支撑的结论。</p>
-        </div>
-        <div class="answer-actions">
-          <button class="answer-action" type="button">保存为笔记</button>
-          <button class="answer-action" type="button">复制出处</button>
-        </div>
-      </article>
-    `,
-  );
-
-  $$(".citation-card").forEach((card, index) => {
-    card.classList.toggle("is-highlighted", index === 0);
+  list.querySelectorAll("button").forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = getTargetList(button.dataset.type);
+      target.splice(Number(button.dataset.index), 1);
+      updateView();
+    });
   });
+}
 
-  chat.scrollTop = chat.scrollHeight;
+function renderCandidates(candidates) {
+  const list = $("#candidateList");
+  if (!list) return;
+
+  list.innerHTML = candidates
+    .map(
+      (candidate) => `
+        <div class="candidate-item">
+          <span>${escapeHtml(candidate)}</span>
+          <button type="button" data-candidate="${escapeHtml(candidate)}">追加</button>
+        </div>
+      `,
+    )
+    .join("");
+
+  list.querySelectorAll("button").forEach((button) => {
+    button.addEventListener("click", () => {
+      addUnique(state.keywords, button.dataset.candidate || "");
+      updateView();
+    });
+  });
+}
+
+function updateCommandPreview() {
+  const command = buildCommand();
+  const preview = $("#commandPreview");
+  if (preview) preview.textContent = command;
+
+  setText("rootCount", state.roots.length);
+  setText("keywordCount", state.keywords.length);
+}
+
+function buildCommand() {
+  const title = getValue("titleInput");
+  const outputDir = getValue("outputDirInput");
+  const outputPrefix = getValue("outputPrefixInput");
+  const contextLines = getValue("contextLinesInput") || "1";
+  const extensions = getExtensions();
+  const caseSensitive = $("#caseSensitiveInput")?.checked;
+
+  const lines = [
+    "python -m engine.runner `",
+    `  --title ${quotePowerShell(title)} ` + "`",
+    ...state.roots.map((root) => `  --root ${quotePowerShell(root)} ` + "`"),
+    `  --keywords ${quotePowerShell(state.keywords.join(","))} ` + "`",
+    ...state.excludes.map((pattern) => `  --exclude ${quotePowerShell(pattern)} ` + "`"),
+    ...extensions.map((extension) => `  --include-extension ${quotePowerShell(extension)} ` + "`"),
+    `  --context-lines ${quotePowerShell(contextLines)} ` + "`",
+  ];
+
+  if (caseSensitive) {
+    lines.push("  --case-sensitive `");
+  }
+
+  lines.push(`  --out-dir ${quotePowerShell(toAbsolutePath(outputDir))} ` + "`");
+  lines.push(`  --prefix ${quotePowerShell(outputPrefix)}`);
+  return lines.join("\n");
+}
+
+function getValue(id) {
+  return $(`#${id}`)?.value.trim() || "";
+}
+
+function getExtensions() {
+  return splitItems(getValue("extensionsInput")).map((extension) =>
+    extension.startsWith(".") ? extension : `.${extension}`,
+  );
+}
+
+function buildPayload() {
+  return {
+    title: getValue("titleInput"),
+    roots: state.roots,
+    keywords: state.keywords,
+    excludePatterns: state.excludes,
+    includeExtensions: getExtensions(),
+    outputDir: toAbsolutePath(getValue("outputDirInput")),
+    outputPrefix: getValue("outputPrefixInput"),
+    fileKinds: ["text", "excel"],
+    caseSensitive: Boolean($("#caseSensitiveInput")?.checked),
+    contextLines: Number(getValue("contextLinesInput") || 0),
+  };
+}
+
+function splitItems(value) {
+  return String(value)
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function addUnique(target, value) {
+  if (!value || target.includes(value)) return;
+  target.push(value);
+}
+
+function getTargetList(type) {
+  if (type === "root") return state.roots;
+  if (type === "keyword") return state.keywords;
+  return state.excludes;
+}
+
+function displayValue(value, type) {
+  return value;
+}
+
+function toAbsolutePath(value) {
+  if (!value) return "";
+  if (/^[A-Za-z]:[\\/]/.test(value) || value.startsWith("\\\\")) return value;
+  if (!state.baseDir) return value;
+  return `${state.baseDir}\\${value}`.replaceAll("/", "\\");
+}
+
+function quotePowerShell(value) {
+  return `"${String(value).replaceAll('"', '`"')}"`;
+}
+
+async function copyCommand() {
+  const command = buildCommand();
+  const status = $("#runStatus");
+
+  try {
+    await navigator.clipboard.writeText(command);
+    if (status) status.textContent = "命令已复制。";
+  } catch {
+    if (status) status.textContent = "复制失败，请手动选择命令文本。";
+  }
+}
+
+async function runInvestigation() {
+  const status = $("#runStatus");
+  const runButton = $("#runInvestigationButton");
+  const topButton = $("#runTopButton");
+
+  setRunning(true, runButton, topButton);
+  setStatus("搜索中，请稍候。", status);
+
+  try {
+    const response = await fetch("/api/investigations/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(buildPayload()),
+    });
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      throw new Error(data.detail || data.error || "搜索失败。");
+    }
+
+    renderResult(data.result);
+    setStatus("搜索完成，报告已生成。", status);
+  } catch (error) {
+    setStatus(error.message || "搜索失败。请确认本地 Web 服务已经启动。", status);
+  } finally {
+    setRunning(false, runButton, topButton);
+  }
+}
+
+async function generateKeywordCandidates() {
+  const status = $("#aiStatus");
+  const button = $("#generateCandidatesButton");
+  const changeText = getValue("changeTextInput");
+
+  if (!changeText) {
+    setStatus("请输入客户变更内容。", status);
+    return;
+  }
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = "生成中";
+  }
+  setStatus("正在生成候选关键词。", status);
+
+  try {
+    const response = await fetch("/api/ai/keyword-candidates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        changeText,
+        existingKeywords: state.keywords,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) {
+      throw new Error(data.detail || data.error || "生成失败。");
+    }
+    renderCandidates(data.candidates || []);
+    setStatus(`生成了 ${(data.candidates || []).length} 个候选关键词。`, status);
+  } catch (error) {
+    setStatus(error.message || "生成失败。", status);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = "生成关键词候选";
+    }
+  }
+}
+
+function renderResult(result) {
+  const card = $("#resultCard");
+  if (card) card.hidden = false;
+
+  setText("textFilesScanned", result.text_files_scanned);
+  setText("excelFilesScanned", result.excel_files_scanned);
+  setText("totalResults", result.total_results);
+  setText("errorResults", result.error_results);
+  setText("reportPath", result.report_path);
+}
+
+function setText(id, value) {
+  const element = $(`#${id}`);
+  if (element) element.textContent = String(value ?? "");
+}
+
+function setStatus(message, element) {
+  if (element) element.textContent = message;
+}
+
+function setRunning(isRunning, ...buttons) {
+  buttons.forEach((button) => {
+    if (!button) return;
+    button.disabled = isRunning;
+    button.textContent = isRunning ? "搜索中" : "开始搜索";
+  });
 }
 
 function escapeHtml(value) {
@@ -196,6 +338,5 @@ function escapeHtml(value) {
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+    .replaceAll('"', "&quot;");
 }
