@@ -1,22 +1,22 @@
 # ZeroTraceSource
 
-ZeroTraceSource is a local source search and citation assistant for documents, notes, and code.
+ZeroTraceSource is a local change impact investigation assistant for code and Excel documents.
 
-It helps users search local materials with natural language, find related files and text snippets, and trace every result back to its original source. The goal is not to let AI make decisions, but to help users locate evidence faster.
+It helps users collect evidence when a customer gives a rough change request and the actual modification scope must be investigated. The goal is not to let AI make decisions, but to help users locate evidence faster.
 
 ## Purpose
 
-Many projects contain information scattered across Markdown files, PDFs, Word documents, source code, SQL files, configuration files, and notes.
+Many projects contain information scattered across source code, SQL files, configuration files, and Excel specifications.
 
 Searching these materials manually often requires repeated keyword guessing, directory switching, script execution, and result Organize. ZeroTraceSource is designed to reduce that work.
 
-A user should be able to ask one question, and the system should help find:
+A user should be able to enter investigation keywords and folders, then get:
 
-- Related files
+- Matching files
 - Matching keywords
-- Source snippets
+- Source snippets and Excel cell values
 - File paths
-- Line numbers or document sections
+- Line numbers or Excel sheet/cell locations
 - Context around each match
 
 ## What It Is
@@ -28,13 +28,13 @@ It uses AI only to assist with search planning, keyword expansion, and result or
 The basic workflow is:
 
 ```text
-User question
+Customer change description
 ↓
-Search plan and keyword expansion
+User confirms search directories and keywords
 ↓
-Local document and code search
+Local code and Excel search
 ↓
-Source snippets and citations
+Excel investigation report
 ↓
 User reviews the evidence
 ```
@@ -58,24 +58,22 @@ Its job is to help users find sources, not to judge them.
 
 ## Planned Features
 
-Initial scope:
+Current first-version scope:
 
-- Local notebook / source collection management
-- Markdown and TXT indexing
-- Source path and snippet search
+- Text and code keyword search
+- Excel workbook cell search
+- Search root, keyword, filter, and output configuration
+- Local workbench page
+- Saved investigation condition configuration
+- Ollama-backed AI keyword candidates with rule-based fallback
 - Keyword-based search
-- Basic natural language query support
-- Source-backed answers
-- Citation and context display
 
 Later scope:
 
 - PDF and Word text extraction
-- Code file indexing
-- SQL and configuration file indexing
 - Project vocabulary extraction
-- Keyword expansion across business terms and code terms
-- Multi-language search support for English, Chinese, and Japanese
+- Source-backed result summaries
+- Optional project dictionaries
 
 ## Engine Prototype
 
@@ -86,9 +84,10 @@ Example:
 ```powershell
 python -m engine.runner `
   --title "Sample Impact Investigation" `
-  --root samples/impact_investigation `
+  --root "E:\AI\apps\ZeroTraceSource\samples\impact_investigation\excel" `
+  --root "E:\AI\apps\ZeroTraceSource\samples\impact_investigation\code" `
   --keywords "safetyStrategy,安全方針,archive_flag,approve_status" `
-  --out-dir outputs `
+  --out-dir "E:\AI\apps\ZeroTraceSource\outputs" `
   --prefix sample-impact-investigation
 ```
 
@@ -120,6 +119,14 @@ http://127.0.0.1:8765/
 ```
 
 The page calls `/api/investigations/run` and writes the investigation report through the same engine used by the command line runner.
+
+The editable workbench defaults are stored in:
+
+```text
+config/investigation-conditions.json
+```
+
+Paths in this file should be full paths. The page reads and saves them as entered, without converting relative paths.
 
 ## Local AI Keyword Candidates
 

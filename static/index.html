@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -13,135 +13,143 @@
           <img class="brand-mark" src="/static/images/ZeroTraceLab.png" alt="ZeroTraceSource">
           <div>
             <div class="brand-name">ZeroTraceSource</div>
-            <div class="brand-subtitle">影响范围调查工作台</div>
+            <div class="brand-subtitle" data-i18n="app.subtitle">Impact investigation workspace</div>
           </div>
         </div>
         <div class="topbar-actions">
           <span class="status-pill">Engine first</span>
+          <select id="languageSelect" class="language-select" aria-label="Language">
+            <option value="en">English</option>
+            <option value="zh">中文</option>
+            <option value="ja">日本語</option>
+          </select>
         </div>
       </header>
 
       <main class="investigation-workspace" id="investigationWorkspace">
-        <aside class="panel form-panel" aria-label="调查条件">
+        <aside class="panel form-panel" aria-label="Investigation conditions">
           <div class="panel-header">
             <div>
-              <h1>调查条件</h1>
-              <p>输入现场调查所需的最小参数。</p>
+              <h1 data-i18n="page.conditions.title">Investigation Conditions</h1>
+              <p data-i18n="page.conditions.subtitle">Enter the minimum inputs needed for field investigation.</p>
+            </div>
+            <div class="panel-actions">
+              <button class="ghost-button" type="button" id="saveConditionsButton" data-i18n="page.actions.saveConditions">Save</button>
             </div>
           </div>
 
           <form class="investigation-form" id="investigationForm">
             <label class="field">
-              <span>调查标题</span>
-              <input id="titleInput" type="text" value="Sample Impact Investigation">
+              <span data-i18n="page.fields.title">Investigation Title</span>
+              <input id="titleInput" type="text">
             </label>
 
             <div class="field">
-              <span>搜索目录</span>
+              <span data-i18n="page.fields.roots">Search Directories</span>
               <div class="add-row">
-                <input id="rootInput" type="text" placeholder="输入式样目录、代码目录或其它搜索目录">
-                <button class="ghost-button" type="button" id="addRootButton">追加</button>
+                <input id="rootInput" type="text" placeholder="Enter a specification, code, or other search directory" data-i18n-placeholder="page.placeholders.root">
+                <button class="ghost-button" type="button" id="addRootButton" data-i18n="page.actions.add">Add</button>
               </div>
               <div class="item-list" id="rootList"></div>
             </div>
 
             <div class="field">
-              <span>关键词</span>
+              <span data-i18n="page.fields.keywords">Keywords</span>
               <div class="add-row">
-                <input id="keywordInput" type="text" placeholder="输入关键词，支持粘贴多行">
-                <button class="ghost-button" type="button" id="addKeywordButton">追加</button>
+                <input id="keywordInput" type="text" placeholder="Enter a keyword; multi-line paste is supported" data-i18n-placeholder="page.placeholders.keyword">
+                <button class="ghost-button" type="button" id="addKeywordButton" data-i18n="page.actions.add">Add</button>
               </div>
               <div class="item-list keyword-items" id="keywordList"></div>
             </div>
 
             <div class="field">
-              <span>不搜索包含这些字符的路径</span>
+              <span data-i18n="page.fields.excludes">Skip paths containing</span>
               <div class="add-row">
-                <input id="excludeInput" type="text" placeholder="例如 old、backup、退避、検証用">
-                <button class="ghost-button" type="button" id="addExcludeButton">追加</button>
+                <input id="excludeInput" type="text" placeholder="For example old, backup, archive, test" data-i18n-placeholder="page.placeholders.exclude">
+                <button class="ghost-button" type="button" id="addExcludeButton" data-i18n="page.actions.add">Add</button>
               </div>
               <div class="item-list keyword-items" id="excludeList"></div>
             </div>
 
             <label class="field">
-              <span>只搜索这些扩展名（可选）</span>
+              <span data-i18n="page.fields.extensions">Only search these extensions (optional)</span>
               <input id="extensionsInput" type="text" placeholder=".java,.sql,.xlsx">
             </label>
 
             <div class="option-grid">
               <div class="option-field">
-                <span>大小写</span>
+                <span data-i18n="page.fields.case">Case</span>
                 <label class="check-field">
                   <input id="caseSensitiveInput" type="checkbox">
-                  <span>区分大小写</span>
+                  <span data-i18n="page.fields.caseSensitive">Case sensitive</span>
                 </label>
               </div>
 
               <label class="field option-field">
-                <span>上下文行数</span>
-                <input id="contextLinesInput" type="number" min="0" max="5" value="1">
+                <span data-i18n="page.fields.contextLines">Context Lines</span>
+                <input id="contextLinesInput" type="number" min="0" max="5">
               </label>
             </div>
 
             <label class="field">
-              <span>输出目录</span>
-              <input id="outputDirInput" type="text" value="outputs">
+              <span data-i18n="page.fields.outputDir">Output Directory</span>
+              <input id="outputDirInput" type="text">
             </label>
 
             <label class="field">
-              <span>文件前缀</span>
-              <input id="outputPrefixInput" type="text" value="sample-impact-investigation">
+              <span data-i18n="page.fields.outputPrefix">File Prefix</span>
+              <input id="outputPrefixInput" type="text">
             </label>
           </form>
         </aside>
 
-        <section class="panel command-panel" aria-label="生成命令">
+        <section class="panel command-panel" aria-label="Run command">
           <div class="panel-header">
             <div>
-              <h1>执行命令</h1>
-              <p>通过本地 Python Web 服务调用搜索引擎。</p>
+              <h1 data-i18n="page.run.title">Run Investigation</h1>
+              <p data-i18n="page.run.subtitle">Call the search engine through the local Python web service.</p>
             </div>
             <div class="panel-actions">
-              <button class="ghost-button" type="button" id="copyCommandButton">复制命令</button>
-              <button class="secondary-button" type="button" id="runInvestigationButton">开始搜索</button>
+              <button class="ghost-button" type="button" id="copyCommandButton" data-i18n="page.actions.copyCommand">Copy Command</button>
+              <button class="secondary-button" type="button" id="runInvestigationButton" data-i18n="page.actions.run">Run Search</button>
             </div>
           </div>
 
           <div class="command-body">
             <div class="metric-grid">
               <div class="metric-card">
-                <span>搜索目录</span>
+                <span data-i18n="page.metrics.roots">Directories</span>
                 <strong id="rootCount">2</strong>
               </div>
               <div class="metric-card">
-                <span>关键词</span>
+                <span data-i18n="page.metrics.keywords">Keywords</span>
                 <strong id="keywordCount">4</strong>
               </div>
               <div class="metric-card">
-                <span>输出格式</span>
+                <span data-i18n="page.metrics.output">Output</span>
                 <strong>Excel</strong>
               </div>
             </div>
 
-            <div class="run-note" id="runStatus">填写条件后点击开始搜索。命令预览保留用于核对。</div>
+              <div class="run-note" id="runStatus" data-i18n="page.status.ready">Fill the conditions and run the search. Command preview is kept for checking.</div>
 
             <div class="result-card" id="resultCard" hidden>
-              <div class="section-label">运行结果</div>
+              <div class="section-label" data-i18n="page.result.title">Run Result</div>
               <dl class="result-grid">
                 <div>
-                  <dt>文本文件</dt>
+                  <dt data-i18n="page.result.textFiles">Text Files</dt>
                   <dd id="textFilesScanned">0</dd>
                 </div>
                 <div>
-                  <dt>Excel 文件</dt>
+                  <dt data-i18n="page.result.excelFiles">Excel Files</dt>
                   <dd id="excelFilesScanned">0</dd>
                 </div>
                 <div>
-                  <dt>命中结果</dt>
+                  <dt data-i18n="page.result.matches">Matches</dt>
                   <dd id="totalResults">0</dd>
                 </div>
                 <div>
-                  <dt>错误</dt>
+                  <dt data-i18n="page.result.errors">Errors</dt>
                   <dd id="errorResults">0</dd>
                 </div>
               </dl>
@@ -149,7 +157,7 @@
             </div>
 
             <div class="report-preview">
-              <div class="section-label">报告 Sheet</div>
+              <div class="section-label" data-i18n="page.reportSheets">Report Sheets</div>
               <div class="sheet-list">
                 <span>Summary</span>
                 <span>SearchResults</span>
@@ -159,28 +167,28 @@
             </div>
 
             <details class="command-card">
-              <summary>PowerShell 命令预览</summary>
+              <summary data-i18n="page.commandPreview">PowerShell Command Preview</summary>
               <pre id="commandPreview"></pre>
             </details>
           </div>
         </section>
 
-        <aside class="panel detail-panel" aria-label="AI辅助">
+        <aside class="panel detail-panel" aria-label="AI assistance">
           <div class="panel-header">
             <div>
-              <h1>AI 辅助</h1>
-              <p>先只生成关键词候选，用户确认后再加入。</p>
+              <h1 data-i18n="page.ai.title">AI Assistance</h1>
+              <p data-i18n="page.ai.subtitle">Generate keyword candidates first; add them only after confirmation.</p>
             </div>
           </div>
 
           <div class="detail-body">
             <label class="field">
-              <span>客户变更内容</span>
-              <textarea id="changeTextInput" class="ai-textarea" rows="6" placeholder="例如：安全方針の表示文言を変更し、承認状態によって制御を変える"></textarea>
+              <span data-i18n="page.ai.changeText">Customer Change Description</span>
+              <textarea id="changeTextInput" class="ai-textarea" rows="6" placeholder="Example: change the safety strategy label and control it by approval status" data-i18n-placeholder="page.ai.placeholder"></textarea>
             </label>
 
-            <button class="secondary-button full-button" type="button" id="generateCandidatesButton">生成关键词候选</button>
-            <div class="run-note" id="aiStatus">候选词不会自动加入，需要手动确认。</div>
+            <button class="secondary-button full-button" type="button" id="generateCandidatesButton" data-i18n="page.ai.generate">Generate Keyword Candidates</button>
+            <div class="run-note" id="aiStatus" data-i18n="page.ai.ready">Candidates are not added automatically. Confirm them manually.</div>
             <div class="candidate-list" id="candidateList"></div>
           </div>
         </aside>

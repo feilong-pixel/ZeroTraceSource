@@ -34,6 +34,8 @@ Recommended structure:
 
 ```text
 ZeroTraceSource/
+  config/
+    investigation-conditions.json
   engine/
     __init__.py
     runner.py
@@ -53,9 +55,11 @@ ZeroTraceSource/
       ai_router.py
       index_router.py
       investigation_router.py
+      workbench_config_router.py
     services/
       ai_service.py
       investigation_service.py
+      workbench_config_service.py
   app.py
   start.ps1
   static/
@@ -66,13 +70,13 @@ ZeroTraceSource/
       app.js
       pages/
         index-page.js
-        investigation-page.js
-      services/
-        investigation-api.js
-      components/
-        keyword-list.js
-        result-table.js
-        source-picker.js
+      core/
+        dialog.js
+        dom.js
+      locales/
+        en.js
+        ja.js
+        zh.js
   docs/
     ai-collaboration-design.md
     architecture.md
@@ -249,7 +253,7 @@ SearchRoots
 Page logic should live under:
 
 ```text
-static/js/pages/investigation-page.js
+static/js/pages/index-page.js
 ```
 
 The page should own:
@@ -261,6 +265,7 @@ The page should own:
 - Result table display
 - Selected result detail display
 - Export button state
+- AI keyword candidate display and manual add actions
 
 The page should not own:
 
@@ -268,39 +273,57 @@ The page should not own:
 - Text matching
 - Excel parsing
 - Report generation
-- Keyword expansion rules
+- AI keyword generation logic
 
-## Service Layer
+## Workbench Configuration
 
-Calls from the page to the engine should live under:
-
-```text
-static/js/services/investigation-api.js
-```
-
-This layer should hide whether the engine is called through:
-
-- A local FastAPI route
-- A later desktop wrapper
-- A later packaged runtime
-
-The page should call service functions, not engine internals.
-
-## Component Layer
-
-Reusable UI pieces can live under:
+Editable investigation defaults live in:
 
 ```text
-static/js/components/
+config/investigation-conditions.json
 ```
 
-Initial candidates:
+The local Web service owns reading and saving this file. The page should load these values on startup and save the current form state when the user explicitly clicks save.
 
-- `keyword-list.js`
-- `source-picker.js`
-- `result-table.js`
+Saved paths should be full paths. The page and service should preserve path strings exactly as entered and should not convert relative paths during load or save.
 
-Components should stay display-focused.
+This configuration covers:
+
+- Investigation title
+- Search roots
+- Keywords
+- Excluded path substrings
+- Optional include extensions
+- Case sensitivity
+- Context lines
+- Output directory
+- Output file prefix
+
+## Local Service Layer
+
+Calls from the page currently go directly to local FastAPI routes:
+
+```text
+/api/investigations/run
+/api/ai/keyword-candidates
+/api/workbench/investigation-conditions
+```
+
+If page code grows, these calls can later move into:
+
+```text
+static/js/services/
+```
+
+## AI Assistance
+
+The first AI feature is keyword candidate generation through local Ollama, with rule-based fallback.
+
+```text
+POST /api/ai/keyword-candidates
+```
+
+AI candidates are never added automatically. The user must manually add selected candidates to the confirmed keyword list.
 
 ## Tooling Policy
 
@@ -326,6 +349,8 @@ Recommended order:
 8. Add investigation page.
 9. Add page service bridge.
 10. Add local FastAPI endpoint for running investigations.
+11. Add saved workbench configuration.
+12. Add local AI keyword candidate assistance.
 
 ## Sample Data
 

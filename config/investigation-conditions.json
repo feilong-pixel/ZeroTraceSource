@@ -1,0 +1,19 @@
+{
+  "title": "Sample Impact Investigation",
+  "roots": [
+    "E:\\AI\\apps\\ZeroTraceSource\\samples\\impact_investigation\\excel",
+    "E:\\AI\\apps\\ZeroTraceSource\\samples\\impact_investigation\\code"
+  ],
+  "keywords": [
+    "safetyStrategy",
+    "安全方針",
+    "archive_flag",
+    "approve_status"
+  ],
+  "excludes": [],
+  "includeExtensions": ".java,.sql,.xlsx",
+  "caseSensitive": false,
+  "contextLines": 1,
+  "outputDir": "E:\\AI\\apps\\ZeroTraceSource\\outputs",
+  "outputPrefix": "sample-impact-investigation"
+}

@@ -85,16 +85,19 @@ The output report should also be Excel because it is easy to filter, annotate, r
 
 ## AI Position
 
-AI is not required for the first version.
+AI is optional in the first version.
+
+The first AI use is limited to:
+
+- Suggesting additional keywords
 
 AI may become useful later for:
 
-- Suggesting additional keywords
 - Grouping search results
 - Drafting a source-backed summary
 - Explaining why certain hits may be related
 
-AI should not replace deterministic search. Search and report generation must work without AI.
+AI should not replace deterministic search. Search and report generation must work without AI, and keyword candidates must be added only after user confirmation.
 
 ## Not A Notebook Clone
 

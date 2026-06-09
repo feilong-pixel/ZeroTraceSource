@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
 
-import { $ } from "../core/dom.js";
+import { $, on, setText as setElementText } from "../core/dom.js";
+import { ensureDialog } from "../core/dialog.js";
+import { getLang, markI18nReady, setLang, t, translateStaticText } from "../locales/i18n.js";
 
 const state = {
-  roots: [
-    "samples/impact_investigation/excel",
-    "samples/impact_investigation/code",
-  ],
-  keywords: ["safetyStrategy", "安全方針", "archive_flag", "approve_status"],
+  roots: [],
+  keywords: [],
   excludes: [],
-  baseDir: "",
+  candidates: [],
 };
 
 const INPUT_IDS = [
@@ -22,68 +21,130 @@ const INPUT_IDS = [
 ];
 
 export function initIndexPage() {
-  const workspace = $("#investigationWorkspace");
-  if (!workspace) return;
+  const els = getIndexElements();
+  if (!els.workspace) return undefined;
 
-  INPUT_IDS.forEach((id) => {
-    const input = $(`#${id}`);
-    if (!input) return;
-    input.addEventListener("input", updateView);
-    input.addEventListener("change", updateView);
+  ensureDialog();
+  translateStaticText();
+  bindInputEvents(els);
+  bindAddList(els.rootInput, els.addRootButton, state.roots, els);
+  bindAddList(els.keywordInput, els.addKeywordButton, state.keywords, els);
+  bindAddList(els.excludeInput, els.addExcludeButton, state.excludes, els);
+  bindLanguageSwitch(els);
+  bindIndexEvents(els);
+
+  loadConditionsConfig(els).finally(() => {
+    updateView(els);
+    markI18nReady();
   });
 
-  bindAddList("rootInput", "addRootButton", state.roots);
-  bindAddList("keywordInput", "addKeywordButton", state.keywords);
-  bindAddList("excludeInput", "addExcludeButton", state.excludes);
-
-  $("#copyCommandButton")?.addEventListener("click", copyCommand);
-  $("#runInvestigationButton")?.addEventListener("click", runInvestigation);
-  $("#runTopButton")?.addEventListener("click", runInvestigation);
-  $("#generateCandidatesButton")?.addEventListener("click", generateKeywordCandidates);
-
-  loadAppInfo().finally(updateView);
+  return { els };
 }
 
-async function loadAppInfo() {
-  const response = await fetch("/api/app-info");
+function getIndexElements() {
+  return {
+    workspace: $("#investigationWorkspace"),
+    titleInput: $("#titleInput"),
+    rootInput: $("#rootInput"),
+    addRootButton: $("#addRootButton"),
+    rootList: $("#rootList"),
+    keywordInput: $("#keywordInput"),
+    addKeywordButton: $("#addKeywordButton"),
+    keywordList: $("#keywordList"),
+    excludeInput: $("#excludeInput"),
+    addExcludeButton: $("#addExcludeButton"),
+    excludeList: $("#excludeList"),
+    extensionsInput: $("#extensionsInput"),
+    caseSensitiveInput: $("#caseSensitiveInput"),
+    contextLinesInput: $("#contextLinesInput"),
+    outputDirInput: $("#outputDirInput"),
+    outputPrefixInput: $("#outputPrefixInput"),
+    saveConditionsButton: $("#saveConditionsButton"),
+    copyCommandButton: $("#copyCommandButton"),
+    runInvestigationButton: $("#runInvestigationButton"),
+    runTopButton: $("#runTopButton"),
+    runStatus: $("#runStatus"),
+    commandPreview: $("#commandPreview"),
+    rootCount: $("#rootCount"),
+    keywordCount: $("#keywordCount"),
+    changeTextInput: $("#changeTextInput"),
+    generateCandidatesButton: $("#generateCandidatesButton"),
+    candidateList: $("#candidateList"),
+    aiStatus: $("#aiStatus"),
+    resultCard: $("#resultCard"),
+    textFilesScanned: $("#textFilesScanned"),
+    excelFilesScanned: $("#excelFilesScanned"),
+    totalResults: $("#totalResults"),
+    errorResults: $("#errorResults"),
+    reportPath: $("#reportPath"),
+    languageSelect: $("#languageSelect"),
+  };
+}
+
+async function loadConditionsConfig(els) {
+  const response = await fetch("/api/workbench/investigation-conditions");
   if (!response.ok) return;
 
   const data = await response.json();
-  state.baseDir = data.base_dir || "";
-  state.roots = state.roots.map((root) => toAbsolutePath(root));
-  const outputDir = $("#outputDirInput");
-  if (outputDir) outputDir.value = toAbsolutePath(outputDir.value);
+  if (!data.ok || !data.conditions) return;
+
+  applyConditionsConfig(els, data.conditions);
 }
 
-function bindAddList(inputId, buttonId, target) {
-  const input = $(`#${inputId}`);
-  const button = $(`#${buttonId}`);
-  if (!input || !button) return;
+function applyConditionsConfig(els, conditions) {
+  state.roots = Array.isArray(conditions.roots) ? conditions.roots : [];
+  state.keywords = Array.isArray(conditions.keywords) ? conditions.keywords : [];
+  state.excludes = Array.isArray(conditions.excludes) ? conditions.excludes : [];
 
-  button.addEventListener("click", () => addItemsFromInput(input, target));
-  input.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter") return;
-    event.preventDefault();
-    addItemsFromInput(input, target);
+  if (els.titleInput) els.titleInput.value = conditions.title || "";
+  if (els.extensionsInput) els.extensionsInput.value = conditions.includeExtensions || "";
+  if (els.caseSensitiveInput) els.caseSensitiveInput.checked = Boolean(conditions.caseSensitive);
+  if (els.contextLinesInput) els.contextLinesInput.value = String(conditions.contextLines ?? 1);
+  if (els.outputDirInput) els.outputDirInput.value = conditions.outputDir || "";
+  if (els.outputPrefixInput) els.outputPrefixInput.value = conditions.outputPrefix || "";
+}
+
+function bindInputEvents(els) {
+  INPUT_IDS.map((id) => els[id]).forEach((input) => {
+    on(input, "input", () => updateView(els));
+    on(input, "change", () => updateView(els));
   });
 }
 
-function addItemsFromInput(input, target) {
-  const items = splitItems(input.value).map((item) => (target === state.roots ? toAbsolutePath(item) : item));
+function bindIndexEvents(els) {
+  on(els.saveConditionsButton, "click", () => saveConditionsConfig(els));
+  on(els.copyCommandButton, "click", () => copyCommand(els));
+  on(els.runInvestigationButton, "click", () => runInvestigation(els));
+  on(els.runTopButton, "click", () => runInvestigation(els));
+  on(els.generateCandidatesButton, "click", () => generateKeywordCandidates(els));
+}
+
+function bindAddList(input, button, target, els) {
+  if (!input || !button) return;
+
+  on(button, "click", () => addItemsFromInput(input, target, els));
+  on(input, "keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    addItemsFromInput(input, target, els);
+  });
+}
+
+function addItemsFromInput(input, target, els) {
+  const items = splitItems(input.value);
   items.forEach((item) => addUnique(target, item));
   input.value = "";
-  updateView();
+  updateView(els);
 }
 
-function updateView() {
-  renderList("rootList", state.roots, "root");
-  renderList("keywordList", state.keywords, "keyword");
-  renderList("excludeList", state.excludes, "exclude");
-  updateCommandPreview();
+function updateView(els) {
+  renderList(els.rootList, state.roots, "root", els);
+  renderList(els.keywordList, state.keywords, "keyword", els);
+  renderList(els.excludeList, state.excludes, "exclude", els);
+  updateCommandPreview(els);
 }
 
-function renderList(listId, items, type) {
-  const list = $(`#${listId}`);
+function renderList(list, items, type, els) {
   if (!list) return;
 
   list.innerHTML = items
@@ -91,60 +152,59 @@ function renderList(listId, items, type) {
       (item, index) => `
         <div class="list-item" title="${escapeHtml(item)}">
           <span>${escapeHtml(displayValue(item, type))}</span>
-          <button type="button" data-type="${type}" data-index="${index}" aria-label="删除">×</button>
+          <button type="button" data-type="${type}" data-index="${index}" aria-label="Remove">×</button>
         </div>
       `,
     )
     .join("");
 
   list.querySelectorAll("button").forEach((button) => {
-    button.addEventListener("click", () => {
+    on(button, "click", () => {
       const target = getTargetList(button.dataset.type);
       target.splice(Number(button.dataset.index), 1);
-      updateView();
+      updateView(els);
     });
   });
 }
 
-function renderCandidates(candidates) {
-  const list = $("#candidateList");
+function renderCandidates(els, candidates) {
+  const list = els.candidateList;
   if (!list) return;
 
+  state.candidates = candidates;
   list.innerHTML = candidates
     .map(
       (candidate) => `
         <div class="candidate-item">
           <span>${escapeHtml(candidate)}</span>
-          <button type="button" data-candidate="${escapeHtml(candidate)}">追加</button>
+          <button type="button" data-candidate="${escapeHtml(candidate)}">${escapeHtml(t("page.ai.add"))}</button>
         </div>
       `,
     )
     .join("");
 
   list.querySelectorAll("button").forEach((button) => {
-    button.addEventListener("click", () => {
+    on(button, "click", () => {
       addUnique(state.keywords, button.dataset.candidate || "");
-      updateView();
+      updateView(els);
     });
   });
 }
 
-function updateCommandPreview() {
-  const command = buildCommand();
-  const preview = $("#commandPreview");
-  if (preview) preview.textContent = command;
+function updateCommandPreview(els) {
+  setElementText(els.commandPreview, buildCommand(els));
 
-  setText("rootCount", state.roots.length);
-  setText("keywordCount", state.keywords.length);
+  setElementText(els.rootCount, state.roots.length);
+  setElementText(els.keywordCount, state.keywords.length);
 }
 
-function buildCommand() {
-  const title = getValue("titleInput");
-  const outputDir = getValue("outputDirInput");
-  const outputPrefix = getValue("outputPrefixInput");
-  const contextLines = getValue("contextLinesInput") || "1";
-  const extensions = getExtensions();
-  const caseSensitive = $("#caseSensitiveInput")?.checked;
+function buildCommand(els) {
+  const title = getValue(els.titleInput);
+  const outputDir = getValue(els.outputDirInput);
+  const outputPrefix = getValue(els.outputPrefixInput);
+  const contextLines = getValue(els.contextLinesInput) || "1";
+  const extensions = getExtensions(els);
+  const caseSensitive = els.caseSensitiveInput?.checked;
 
   const lines = [
     "python -m engine.runner `",
@@ -160,33 +220,47 @@ function buildCommand() {
     lines.push("  --case-sensitive `");
   }
 
-  lines.push(`  --out-dir ${quotePowerShell(toAbsolutePath(outputDir))} ` + "`");
+  lines.push(`  --out-dir ${quotePowerShell(outputDir)} ` + "`");
   lines.push(`  --prefix ${quotePowerShell(outputPrefix)}`);
   return lines.join("\n");
 }
 
-function getValue(id) {
-  return $(`#${id}`)?.value.trim() || "";
+function getValue(input) {
+  return input?.value.trim() || "";
 }
 
-function getExtensions() {
-  return splitItems(getValue("extensionsInput")).map((extension) =>
+function getExtensions(els) {
+  return splitItems(getValue(els.extensionsInput)).map((extension) =>
     extension.startsWith(".") ? extension : `.${extension}`,
   );
 }
 
-function buildPayload() {
+function buildPayload(els) {
   return {
-    title: getValue("titleInput"),
+    title: getValue(els.titleInput),
     roots: state.roots,
     keywords: state.keywords,
     excludePatterns: state.excludes,
-    includeExtensions: getExtensions(),
-    outputDir: toAbsolutePath(getValue("outputDirInput")),
-    outputPrefix: getValue("outputPrefixInput"),
+    includeExtensions: getExtensions(els),
+    outputDir: getValue(els.outputDirInput),
+    outputPrefix: getValue(els.outputPrefixInput),
     fileKinds: ["text", "excel"],
-    caseSensitive: Boolean($("#caseSensitiveInput")?.checked),
-    contextLines: Number(getValue("contextLinesInput") || 0),
+    caseSensitive: Boolean(els.caseSensitiveInput?.checked),
+    contextLines: Number(getValue(els.contextLinesInput) || 0),
+  };
+}
+
+function buildConditionsConfig(els) {
+  return {
+    title: getValue(els.titleInput),
+    roots: state.roots,
+    keywords: state.keywords,
+    excludes: state.excludes,
+    includeExtensions: getValue(els.extensionsInput),
+    caseSensitive: Boolean(els.caseSensitiveInput?.checked),
+    contextLines: Number(getValue(els.contextLinesInput) || 0),
+    outputDir: getValue(els.outputDirInput),
+    outputPrefix: getValue(els.outputPrefixInput),
   };
 }
 
@@ -212,73 +286,91 @@ function displayValue(value, type) {
   return value;
 }
 
-function toAbsolutePath(value) {
-  if (!value) return "";
-  if (/^[A-Za-z]:[\\/]/.test(value) || value.startsWith("\\\\")) return value;
-  if (!state.baseDir) return value;
-  return `${state.baseDir}\\${value}`.replaceAll("/", "\\");
-}
-
 function quotePowerShell(value) {
   return `"${String(value).replaceAll('"', '`"')}"`;
 }
 
-async function copyCommand() {
-  const command = buildCommand();
-  const status = $("#runStatus");
-
+async function copyCommand(els) {
   try {
-    await navigator.clipboard.writeText(command);
-    if (status) status.textContent = "命令已复制。";
+    await navigator.clipboard.writeText(buildCommand(els));
+    setStatus(t("page.status.copied"), els.runStatus);
   } catch {
-    if (status) status.textContent = "复制失败，请手动选择命令文本。";
+    setStatus(t("page.status.copyFailed"), els.runStatus);
   }
 }
 
-async function runInvestigation() {
-  const status = $("#runStatus");
-  const runButton = $("#runInvestigationButton");
-  const topButton = $("#runTopButton");
+async function saveConditionsConfig(els) {
+  const button = els.saveConditionsButton;
 
-  setRunning(true, runButton, topButton);
-  setStatus("搜索中，请稍候。", status);
+  if (button) {
+    button.disabled = true;
+    button.textContent = t("page.actions.saving");
+  }
+  setStatus(t("page.status.savingConditions"), els.runStatus);
+
+  try {
+    const response = await fetch("/api/workbench/investigation-conditions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(buildConditionsConfig(els)),
+    });
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      throw new Error(data.detail || data.error || t("page.status.saveConditionsFailed"));
+    }
+
+    applyConditionsConfig(els, data.conditions);
+    updateView(els);
+    setStatus(t("page.status.conditionsSaved"), els.runStatus);
+  } catch (error) {
+    setStatus(error.message || t("page.status.saveConditionsFailed"), els.runStatus);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = t("page.actions.saveConditions");
+    }
+  }
+}
+
+async function runInvestigation(els) {
+  setRunning(true, els.runInvestigationButton, els.runTopButton);
+  setStatus(t("page.status.running"), els.runStatus);
 
   try {
     const response = await fetch("/api/investigations/run", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(buildPayload()),
+      body: JSON.stringify(buildPayload(els)),
     });
     const data = await response.json();
 
     if (!response.ok || !data.ok) {
-      throw new Error(data.detail || data.error || "搜索失败。");
+      throw new Error(data.detail || data.error || t("page.status.runFailed"));
     }
 
-    renderResult(data.result);
-    setStatus("搜索完成，报告已生成。", status);
+    renderResult(els, data.result);
+    setStatus(t("page.status.success"), els.runStatus);
   } catch (error) {
-    setStatus(error.message || "搜索失败。请确认本地 Web 服务已经启动。", status);
+    setStatus(error.message || t("page.status.runFailed"), els.runStatus);
   } finally {
-    setRunning(false, runButton, topButton);
+    setRunning(false, els.runInvestigationButton, els.runTopButton);
   }
 }
 
-async function generateKeywordCandidates() {
-  const status = $("#aiStatus");
-  const button = $("#generateCandidatesButton");
-  const changeText = getValue("changeTextInput");
+async function generateKeywordCandidates(els) {
+  const changeText = getValue(els.changeTextInput);
 
   if (!changeText) {
-    setStatus("请输入客户变更内容。", status);
+    setStatus(t("page.ai.requireText"), els.aiStatus);
     return;
   }
 
-  if (button) {
-    button.disabled = true;
-    button.textContent = "生成中";
+  if (els.generateCandidatesButton) {
+    els.generateCandidatesButton.disabled = true;
+    els.generateCandidatesButton.textContent = t("page.ai.generating");
   }
-  setStatus("正在生成候选关键词。", status);
+  setStatus(t("page.ai.generating"), els.aiStatus);
 
   try {
     const response = await fetch("/api/ai/keyword-candidates", {
@@ -291,45 +383,54 @@ async function generateKeywordCandidates() {
     });
     const data = await response.json();
     if (!response.ok || !data.ok) {
-      throw new Error(data.detail || data.error || "生成失败。");
+      throw new Error(data.detail || data.error || t("dialog.title.error"));
     }
-    renderCandidates(data.candidates || []);
-    setStatus(`生成了 ${(data.candidates || []).length} 个候选关键词。`, status);
+    renderCandidates(els, data.candidates || []);
+    setStatus(t("page.ai.generated", (data.candidates || []).length), els.aiStatus);
   } catch (error) {
-    setStatus(error.message || "生成失败。", status);
+    setStatus(error.message || t("dialog.title.error"), els.aiStatus);
   } finally {
-    if (button) {
-      button.disabled = false;
-      button.textContent = "生成关键词候选";
+    if (els.generateCandidatesButton) {
+      els.generateCandidatesButton.disabled = false;
+      els.generateCandidatesButton.textContent = t("page.ai.generate");
     }
   }
 }
 
-function renderResult(result) {
-  const card = $("#resultCard");
-  if (card) card.hidden = false;
+function renderResult(els, result) {
+  if (els.resultCard) els.resultCard.hidden = false;
 
-  setText("textFilesScanned", result.text_files_scanned);
-  setText("excelFilesScanned", result.excel_files_scanned);
-  setText("totalResults", result.total_results);
-  setText("errorResults", result.error_results);
-  setText("reportPath", result.report_path);
-}
-
-function setText(id, value) {
-  const element = $(`#${id}`);
-  if (element) element.textContent = String(value ?? "");
+  setElementText(els.textFilesScanned, result.text_files_scanned);
+  setElementText(els.excelFilesScanned, result.excel_files_scanned);
+  setElementText(els.totalResults, result.total_results);
+  setElementText(els.errorResults, result.error_results);
+  setElementText(els.reportPath, result.report_path);
 }
 
 function setStatus(message, element) {
-  if (element) element.textContent = message;
+  setElementText(element, message);
 }
 
 function setRunning(isRunning, ...buttons) {
   buttons.forEach((button) => {
     if (!button) return;
     button.disabled = isRunning;
-    button.textContent = isRunning ? "搜索中" : "开始搜索";
+    button.textContent = isRunning ? t("page.actions.running") : t("page.actions.run");
+  });
+}
+
+function bindLanguageSwitch(els) {
+  const select = els.languageSelect;
+  if (!select) return;
+
+  select.value = getLang();
+  on(select, "change", () => {
+    setLang(select.value);
+    translateStaticText();
+    updateView(els);
+    renderCandidates(els, state.candidates);
+    setStatus(t("page.status.ready"), els.runStatus);
+    setStatus(t("page.ai.ready"), els.aiStatus);
   });
 }
 

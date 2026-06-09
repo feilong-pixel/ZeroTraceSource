@@ -102,6 +102,17 @@ button:disabled {
   gap: 10px;
 }
 
+.language-select {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .status-pill {
   padding: 5px 10px;
   border-radius: 999px;

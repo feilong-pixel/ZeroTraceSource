@@ -72,13 +72,13 @@ ZeroTraceSource/
       app.js
       pages/
         index-page.js
-        investigation-page.js
-      services/
-        investigation-api.js
-      components/
-        keyword-list.js
-        result-table.js
-        source-picker.js
+      core/
+        dialog.js
+        dom.js
+      locales/
+        en.js
+        ja.js
+        zh.js
   docs/
     architecture.md
     engine-first-design.md
@@ -112,19 +112,19 @@ The page owns interaction and display.
 Page logic should live under:
 
 ```text
-static/js/pages/investigation-page.js
+static/js/pages/index-page.js
 ```
 
-Shared UI pieces can live under:
+Shared UI helpers live under:
 
 ```text
-static/js/components/
+static/js/core/
 ```
 
-Calls to the backend or local engine bridge should live under:
+Locale modules live under:
 
 ```text
-static/js/services/investigation-api.js
+static/js/locales/
 ```
 
 This keeps the browser code from becoming the real search system.
@@ -317,7 +317,7 @@ SearchRoots
 
 ## Tool Policy
 
-The first version should not depend on bundled command line tools.
+The first version does not depend on bundled command line tools.
 
 Python should own the main flow:
 
@@ -327,6 +327,16 @@ Python should own the main flow:
 - Excel report output
 
 This keeps the engine portable and avoids parsing external grep output.
+
+## Current First-Version Additions
+
+After the deterministic engine became stable, the first page added:
+
+- Local FastAPI service integration
+- Saved workbench configuration in `config/investigation-conditions.json`
+- Full-path defaults for search roots and output directory
+- Local Ollama keyword candidate assistance with rule-based fallback
+- English-based static UI text with locale modules for English, Chinese, and Japanese
 
 ## Future Extensions
 
@@ -338,10 +348,10 @@ After the first version works, the system can grow in this order:
 4. Add Word and PDF text extraction.
 5. Add project dictionary suggestions.
 6. Add optional symbol extraction if real investigations require it.
-7. Add AI-assisted keyword expansion.
+7. Improve AI-assisted keyword expansion.
 8. Add source-backed summary generation.
 
-AI should only enter after the deterministic search and Excel report pipeline is reliable.
+AI should remain optional. Deterministic search and Excel report generation must continue to work without AI.
 
 ## Development Order
 

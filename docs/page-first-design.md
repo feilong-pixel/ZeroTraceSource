@@ -40,10 +40,11 @@ The first page should support:
 - Run investigation action through the local FastAPI service
 - Run result summary
 - Static preview of expected report sheets
+- Saved investigation condition defaults
+- AI keyword candidate generation and manual add actions
 
 The first page should not support:
 
-- AI keyword generation
 - AI result summary
 - Direct file picker integration
 - Notebook-style chat
@@ -90,7 +91,29 @@ The backend should create the final report name:
 <prefix>_YYYYMMDD_HHMMSS.xlsx
 ```
 
-Search directories and output directories should be passed to the engine as absolute paths. The page may ask the backend for the application base directory and resolve default sample paths from there.
+Search directories and output directories should be passed to the engine as entered. For the saved configuration, use full paths to avoid ambiguity.
+
+## Saved Conditions
+
+The `Investigation Conditions` panel should load its editable values from:
+
+```text
+config/investigation-conditions.json
+```
+
+The page should not hard-code default title, search directories, keywords, filters, output settings, or search options in JavaScript or HTML. On startup, the page should call:
+
+```text
+GET /api/workbench/investigation-conditions
+```
+
+When the user clicks save, the page should write the current form state through:
+
+```text
+POST /api/workbench/investigation-conditions
+```
+
+Saved paths should be full paths. The page should display exactly what is read from the JSON file and save exactly what the user entered. Do not convert relative paths to full paths during load or save.
 
 ## Layout
 
@@ -114,6 +137,18 @@ It does not own:
 - Excel parsing
 - Report writing
 - AI keyword expansion
+
+## Localization
+
+Base HTML and JavaScript UI text should be written in English.
+
+User-facing labels, placeholders, button text, and status messages should use the locale modules under:
+
+```text
+static/js/locales/
+```
+
+Do not hard-code Chinese or Japanese UI text in `static/index.html` or page scripts. Business sample values such as default search keywords may still include Japanese or Chinese when they are test data rather than UI labels.
 
 ## Implementation Files
 
@@ -150,5 +185,6 @@ The first page is acceptable when:
 - It updates the command when inputs change.
 - It offers a copy command action.
 - It can call `/api/investigations/run`.
+- It can call `/api/ai/keyword-candidates` and require manual confirmation before adding candidates.
 - It displays text file count, Excel file count, total result count, error count, and report path.
-- It clearly states that AI is not part of the first page flow.
+- It can load and save investigation condition defaults through the local configuration API.
