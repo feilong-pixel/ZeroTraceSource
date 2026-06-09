@@ -88,4 +88,3 @@ ZeroTraceSource should always keep a clear boundary:
 ## License
 
 MIT License.
-```
