@@ -121,6 +121,20 @@ http://127.0.0.1:8765/
 
 The page calls `/api/investigations/run` and writes the investigation report through the same engine used by the command line runner.
 
+## Local AI Keyword Candidates
+
+The AI assistance panel calls Ollama for keyword candidates and falls back to rule-based extraction if Ollama is unavailable.
+
+Default settings:
+
+```text
+ZT_AI_PROVIDER=ollama
+ZT_OLLAMA_MODEL=qwen3:8b
+ZT_OLLAMA_URL=http://127.0.0.1:11434
+```
+
+For Qwen3, the backend sends `think: false` and asks for JSON-only keyword candidates.
+
 ## Design Principle
 
 ZeroTraceSource should always keep a clear boundary:

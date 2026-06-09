@@ -35,7 +35,35 @@ The candidates are not automatically searched. The user must add them manually.
 
 ## First Implementation
 
-The first implementation may be rule-based and does not need to call a real local model.
+The first implementation should call local Ollama first and fall back to rule-based candidates if Ollama is unavailable or returns invalid JSON.
+
+Default local model:
+
+```text
+qwen3:8b
+```
+
+Ollama endpoint:
+
+```text
+http://127.0.0.1:11434/api/chat
+```
+
+Qwen3 should run without thinking output for this task:
+
+```json
+{
+  "think": false
+}
+```
+
+The prompt should also begin the user message with:
+
+```text
+/no_think
+```
+
+The backend should remove any `<think>...</think>` block before parsing the model response.
 
 API:
 
@@ -59,6 +87,47 @@ Response:
   "ok": true,
   "candidates": ["安全方針", "表示文言", "承認状態", "制御"]
 }
+```
+
+## Configuration
+
+Environment variables:
+
+```text
+ZT_AI_PROVIDER=ollama
+ZT_OLLAMA_MODEL=qwen3:8b
+ZT_OLLAMA_URL=http://127.0.0.1:11434
+```
+
+If these variables are not set, the backend uses the defaults above.
+
+If `ZT_AI_PROVIDER` is not `ollama`, the backend skips Ollama and uses the rule-based fallback.
+
+## Prompt Contract
+
+The Ollama prompt must keep the output narrow:
+
+```text
+You are a local change impact investigation assistant.
+Generate keyword candidates for searching source code and Excel specification documents.
+Return only a JSON array of strings. Do not explain.
+Include Japanese business terms, possible English variable names, and possible snake_case database field names.
+Do not judge impact scope. Do not output conclusions. Limit to 20 items.
+```
+
+Expected model output:
+
+```json
+[
+  "安全方針",
+  "表示文言",
+  "承認状態",
+  "制御",
+  "safetyStrategy",
+  "safety_strategy",
+  "approveStatus",
+  "approve_status"
+]
 ```
 
 ## UI Placement
